@@ -1,16 +1,31 @@
 const rl = @import("raylib");
 
+const CARD_W = 200;
+const CARD_H = 300;
+
+pub const CardKind = enum {
+    attack,
+    defend,
+};
+
 pub const Card = struct {
     name: [:0]const u8,
+    kind: CardKind,
     rect: rl.Rectangle,
-    pub fn init(name: [:0]const u8, rect: rl.Rectangle) Card {
+    value: u32,
+
+    pub fn init(name: [:0]const u8, kind: CardKind, value: u32, rect: rl.Rectangle) Card {
         return Card{
             .name = name,
+            .kind = kind,
+            .value = value,
             .rect = rect,
         };
     }
 
-    pub fn draw(self: Card) void {
+    pub fn draw(
+        self: Card,
+    ) void {
         const font_size: usize = 10;
         rl.drawRectangleRec(self.rect, .ray_white);
         const text_len = rl.measureText(self.name, font_size);
