@@ -61,7 +61,13 @@ pub const Enemy = struct {
         //std.debug.print("ended at {d},{d}\n", .{ self.pos.x, self.pos.y });
     }
 
-    pub fn deal_damage(self: *Enemy, damage: f32) void {
+    pub fn deal_damage(self: *Enemy, damage: f32) bool {
         self.health -= damage;
+        if (self.health < 0.0) {
+            self.alive = false;
+            return true;
+        }
+
+        return false;
     }
 };
