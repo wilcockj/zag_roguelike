@@ -4,8 +4,9 @@ const std = @import("std");
 pub const Enemy = struct {
     pos: rl.Vector2,
     id: usize,
-    birth_time: usize,
     color: rl.Color,
+    alive: bool,
+    velocity: f32,
 
     pub fn spawn(id: usize, color: rl.Color, rand: std.Random) Enemy {
         // spawn the enemy outside of the screen
@@ -29,11 +30,22 @@ pub const Enemy = struct {
             .pos = rl.Vector2.init(spawn_x, spawn_y),
             .id = id,
             .color = color,
-            .birth_time = 0,
+            .alive = true,
+            .velocity = 30.0 * (rand.float(f32) + 0.25),
         };
     }
 
-    pub fn draw(self: *Enemy) void {
-        rl.drawRectangle(self.pos.x, self.pos.y, 10, 10);
+    pub fn draw(self: Enemy) void {
+        rl.drawRectangle(@intFromFloat(self.pos.x), @intFromFloat(self.pos.y), 10, 10, self.color);
+    }
+
+    pub fn move_towards(self: *Enemy, target: rl.Vector2, deltatime: f32) void {
+        // move towards this target based on velocity
+
+        std.debug.print("started at {d},{d}\n", .{ self.pos.x, self.pos.y });
+        // get vector from current location to target
+        const vec = rl.Vector2.normalize(rl.Vector2.subtract(target, self.pos));
+        self.pos = rl.Vector2.add(self.pos, rl.Vector2.scale(vec, deltatime * self.velocity));
+        std.debug.print("ended at {d},{d}\n", .{ self.pos.x, self.pos.y });
     }
 };

@@ -21,13 +21,20 @@ const Game = struct {
     state: State,
     cards: std.ArrayList(card.Card),
     card_pool: std.ArrayList(card.Card),
+    enemies: std.ArrayList(enemy.Enemy),
+    enemy_count: usize = 0,
+    rand: std.Random,
 
-    pub fn init(allocator: std.mem.Allocator) !Game {
+    spawn_cooldown: f32 = 2.0,
+    spawn_timer: f32 = 2.0,
+    pub fn init(allocator: std.mem.Allocator, rand: std.Random) !Game {
         var game = Game{
             .allocator = allocator,
             .state = .menu,
             .cards = .empty,
             .card_pool = .empty,
+            .enemies = .empty,
+            .rand = rand,
         };
 
         try game.card_pool.append(allocator, card.Card.init(allocator, "pull tha plug", .attack, 12, 10));
@@ -46,14 +53,34 @@ const Game = struct {
             const pad = 5;
             try c.draw(rl.Vector2.init(@floatFromInt(pad + (card.CARD_W + pad) * i), window_h - card.CARD_H - pad));
         }
+        for (self.enemies.items) |e| {
+            e.draw();
+        }
     }
 
-    pub fn update(self: *Game, dt: f32) void {
+    pub fn update(self: *Game, dt: f32) !void {
         for (self.cards.items) |*c| {
             if (c.update_cooldown(dt)) {
                 // attck or whatever
             }
         }
+
+        self.spawn_timer -= dt;
+        if (self.spawn_timer < 0.0) {
+            try self.spawn_enemy();
+            self.spawn_timer = self.spawn_cooldown;
+        }
+        for (self.enemies.items) |*e| {
+            const width: f32 = @as(f32, @floatFromInt(rl.getScreenWidth()));
+            const height: f32 = @as(f32, @floatFromInt(rl.getScreenHeight()));
+            const center = rl.Vector2.init(@divFloor(width, 2), @divFloor(height, 2));
+            e.move_towards(center, dt);
+        }
+    }
+
+    pub fn spawn_enemy(self: *Game) !void {
+        try self.enemies.append(self.allocator, enemy.Enemy.spawn(self.enemy_count, .red, self.rand));
+        self.enemy_count += 1;
     }
 };
 
@@ -63,17 +90,15 @@ pub fn main(init: std.process.Init) !void {
 
     const allocator = arena.allocator();
 
-    var game = try Game.init(allocator);
-    defer game.deinit();
-
-    try game.cards.append(allocator, game.card_pool.items[0]);
-
     // why can't i do init(100).random() ??
     const timestamp = std.Io.Clock.real.now(init.io);
     var prng = std.Random.Xoroshiro128.init(@intCast(std.Io.Timestamp.toMilliseconds(timestamp)));
     const rand: std.Random = prng.random();
-    const en = enemy.Enemy.spawn(0, .red, rand);
-    _ = en;
+
+    var game = try Game.init(allocator, rand);
+    defer game.deinit();
+
+    try game.cards.append(allocator, game.card_pool.items[0]);
 
     rl.initWindow(window_w, window_h, "game");
     rl.setExitKey(.null);
@@ -84,7 +109,7 @@ pub fn main(init: std.process.Init) !void {
 
         const dt = rl.getFrameTime();
 
-        game.update(dt);
+        try game.update(dt);
 
         rl.clearBackground(rl.getColor(0x181818ff));
         switch (game.state) {
