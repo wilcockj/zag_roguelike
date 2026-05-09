@@ -98,11 +98,6 @@ pub fn main(init: std.process.Init) !void {
     var game = try Game.init(allocator, rand);
     defer game.deinit();
 
-    try game.cards.append(allocator, game.card_pool.items[0]);
-
-    var game = try Game.init(allocator);
-    defer game.deinit();
-
     for (0..5) |_| {
         const idx = rand.uintLessThan(u32, @intCast(game.card_pool.items.len));
         try game.cards.append(allocator, game.card_pool.items[idx]);
