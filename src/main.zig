@@ -7,6 +7,9 @@ const enemy = @import("enemies.zig");
 
 const zag_roguelike = @import("zag_roguelike");
 
+const window_w = 800;
+const window_h = 450;
+
 const State = enum {
     menu,
     running,
@@ -17,22 +20,37 @@ const Game = struct {
     allocator: std.mem.Allocator,
     state: State,
     cards: std.ArrayList(card.Card),
+    card_pool: std.ArrayList(card.Card),
 
-    pub fn init(allocator: std.mem.Allocator) Game {
-        return Game{
+    pub fn init(allocator: std.mem.Allocator) !Game {
+        var game = Game{
             .allocator = allocator,
             .state = .menu,
             .cards = .empty,
+            .card_pool = .empty,
         };
+
+        try game.card_pool.append(allocator, card.Card.init(allocator, "pull tha plug", .attack, 12, 10));
+
+        return game;
     }
 
     pub fn deinit(self: *Game) void {
         self.cards.deinit(self.allocator);
     }
 
-    pub fn draw(self: *Game) void {
-        for (self.cards.items) |c| {
-            c.draw();
+    pub fn draw(self: *Game) !void {
+        for (self.cards.items, 0..) |c, i| {
+            const pad = 5;
+            try c.draw(rl.Vector2.init(@floatFromInt(pad + (card.CARD_W + pad) * i), window_h - card.CARD_H - pad));
+        }
+    }
+
+    pub fn update(self: *Game, dt: f32) void {
+        for (self.cards.items) |*c| {
+            if (c.update_cooldown(dt)) {
+                // attck or whatever
+            }
         }
     }
 };
@@ -43,7 +61,7 @@ pub fn main(init: std.process.Init) !void {
 
     const allocator = arena.allocator();
 
-    var game = Game.init(allocator);
+    var game = try Game.init(allocator);
     defer game.deinit();
 
     rl.initWindow(800, 450, "game");
@@ -53,11 +71,18 @@ pub fn main(init: std.process.Init) !void {
     const rand: std.Random = prng.random();
     const en = enemy.Enemy.spawn(0, .red, rand);
     _ = en;
+    try game.cards.append(allocator, game.card_pool.items[0]);
+
+    rl.initWindow(window_w, window_h, "game");
     rl.setExitKey(.null);
 
     while (!rl.windowShouldClose()) {
         rl.beginDrawing();
         defer rl.endDrawing();
+
+        const dt = rl.getFrameTime();
+
+        game.update(dt);
 
         rl.clearBackground(rl.getColor(0x181818ff));
         switch (game.state) {
@@ -67,7 +92,7 @@ pub fn main(init: std.process.Init) !void {
             },
             .running => {
                 if (rl.isKeyPressed(.escape)) game.state = .paused;
-                game.draw();
+                try game.draw();
             },
             .paused => {
                 if (rg.button(rl.Rectangle.init(10, 10, 150, 50), "resume")) game.state = .running;
