@@ -62,5 +62,8 @@ pub const Enemy = struct {
 
     pub fn deal_damage(self: *Enemy, damage: f32) void {
         self.health -= damage;
+        if (self.health < 0.0) {
+            self.alive = false;
+        }
     }
 };

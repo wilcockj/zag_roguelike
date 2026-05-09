@@ -69,15 +69,26 @@ const Game = struct {
                     var distance: f32 = std.math.floatMax(f32);
                     for (self.enemies.items, 0..) |e, i| {
                         const d = center.distance(e.pos);
-                        if (d < distance) {
+                        if (d < distance and e.alive) {
                             distance = d;
                             idx = @intCast(i);
                         }
                     }
 
                     if (idx >= 0) {
-                        self.enemies.items[@as(usize, @intCast(idx))].deal_damage(@floatFromInt(c.value));
+                        const enemy_idx = @as(usize, @intCast(idx));
+                        self.enemies.items[enemy_idx].deal_damage(@floatFromInt(c.value));
                     }
+                }
+            }
+        }
+
+        // remove the dead enemies from the arraylist
+        for (0..self.enemies.items.len) |_| {
+            for (0..self.enemies.items.len) |idx| {
+                if (!self.enemies.items[idx].alive) {
+                    _ = self.enemies.swapRemove(idx);
+                    break;
                 }
             }
         }
