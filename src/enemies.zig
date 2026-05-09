@@ -7,6 +7,8 @@ pub const Enemy = struct {
     color: rl.Color,
     alive: bool,
     velocity: f32,
+    max_health: f32,
+    health: f32,
 
     pub fn spawn(id: usize, color: rl.Color, rand: std.Random) Enemy {
         // spawn the enemy outside of the screen
@@ -26,26 +28,39 @@ pub const Enemy = struct {
         }
 
         std.debug.print("spawning enemy at {d}, {d}\n", .{ spawn_x, spawn_y });
+        const health = 30.0 + rand.float(f32) * 40;
         return Enemy{
             .pos = rl.Vector2.init(spawn_x, spawn_y),
             .id = id,
             .color = color,
             .alive = true,
             .velocity = 30.0 * (rand.float(f32) + 0.25),
+            .max_health = health,
+            .health = health,
         };
     }
 
     pub fn draw(self: Enemy) void {
+        // draw healthbar
+
+        const line_y = rl.Vector2.add(self.pos, rl.Vector2.init(0, -5)).y;
+        const health_percent = self.health / self.max_health;
+        rl.drawLineEx(rl.Vector2.init(self.pos.x, line_y), rl.Vector2.init(self.pos.x + 10 * health_percent, line_y), 1.0, .blue);
+
         rl.drawRectangle(@intFromFloat(self.pos.x), @intFromFloat(self.pos.y), 10, 10, self.color);
     }
 
     pub fn move_towards(self: *Enemy, target: rl.Vector2, deltatime: f32) void {
         // move towards this target based on velocity
 
-        std.debug.print("started at {d},{d}\n", .{ self.pos.x, self.pos.y });
+        //std.debug.print("started at {d},{d}\n", .{ self.pos.x, self.pos.y });
         // get vector from current location to target
         const vec = rl.Vector2.normalize(rl.Vector2.subtract(target, self.pos));
         self.pos = rl.Vector2.add(self.pos, rl.Vector2.scale(vec, deltatime * self.velocity));
-        std.debug.print("ended at {d},{d}\n", .{ self.pos.x, self.pos.y });
+        //std.debug.print("ended at {d},{d}\n", .{ self.pos.x, self.pos.y });
+    }
+
+    pub fn deal_damage(self: *Enemy, damage: f32) void {
+        self.health -= damage;
     }
 };
