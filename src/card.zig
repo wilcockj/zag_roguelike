@@ -46,7 +46,7 @@ pub const Card = struct {
         const font_size: usize = 20;
         const card_rect: rl.Rectangle = .init(pos.x, pos.y, CARD_W, CARD_H);
         const pad = 5;
-        rl.drawRectangleRec(card_rect, .black);
+        rl.drawRectangleRec(card_rect, rl.getColor(0x00000099));
         rl.drawRectangleLinesEx(card_rect, 2, .ray_white);
         const title_x: i32 = @as(i32, @intFromFloat(card_rect.x)) + pad;
         const title_y: i32 = @as(i32, @intFromFloat(card_rect.y)) + pad;

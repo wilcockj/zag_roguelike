@@ -49,19 +49,34 @@ const Game = struct {
     }
 
     pub fn draw(self: *Game) !void {
+        for (self.enemies.items) |e| {
+            e.draw();
+        }
+
         for (self.cards.items, 0..) |c, i| {
             const pad = 5;
             try c.draw(rl.Vector2.init(@floatFromInt(pad + (card.CARD_W + pad) * i), window_h - card.CARD_H - pad));
-        }
-        for (self.enemies.items) |e| {
-            e.draw();
         }
     }
 
     pub fn update(self: *Game, dt: f32) !void {
         for (self.cards.items) |*c| {
             if (c.update_cooldown(dt)) {
-                // c.execute(game context)
+                if (c.kind == .attack) {
+                    const center: rl.Vector2 = .init(@floatFromInt(@divTrunc(rl.getScreenWidth(), 2)), @floatFromInt(@divTrunc(rl.getScreenHeight(), 2)));
+
+                    var idx: i32 = -1;
+                    var distance: f32 = std.math.floatMax(f32);
+                    for (self.enemies.items, 0..) |e, i| {
+                        const d = center.distance(e.pos);
+                        if (d < distance) {
+                            distance = d;
+                            idx = @intCast(i);
+                        }
+                    }
+
+                    if (idx >= 0) {}
+                }
             }
         }
 
