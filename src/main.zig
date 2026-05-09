@@ -16,7 +16,8 @@ pub fn main(init: std.process.Init) !void {
     var cards: std.ArrayList(card.Card) = .empty;
     defer cards.deinit(allocator);
 
-    try cards.append(allocator, card.Card.init("test"));
+    const rect = rl.Rectangle.init(10, 10, 300, 200);
+    try cards.append(allocator, card.Card.init("test", rect));
 
     rl.initWindow(800, 450, "game");
 
