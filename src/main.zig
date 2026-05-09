@@ -2,6 +2,7 @@ const std = @import("std");
 const Io = std.Io;
 const rl = @import("raylib");
 const card = @import("card.zig");
+const enemy = @import("enemies.zig");
 
 const zag_roguelike = @import("zag_roguelike");
 
@@ -29,8 +30,6 @@ const Game = struct {
 };
 
 pub fn main(init: std.process.Init) !void {
-    _ = init;
-
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
 
@@ -40,7 +39,12 @@ pub fn main(init: std.process.Init) !void {
     defer game.deinit();
 
     rl.initWindow(800, 450, "game");
-
+    // why can't i do init(100).random() ??
+    const timestamp = std.Io.Clock.real.now(init.io);
+    var prng = std.Random.Xoroshiro128.init(@intCast(std.Io.Timestamp.toMilliseconds(timestamp)));
+    const rand: std.Random = prng.random();
+    const en = enemy.Enemy.spawn(0, .red, rand);
+    _ = en;
     while (!rl.windowShouldClose()) {
         rl.beginDrawing();
         defer rl.endDrawing();

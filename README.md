@@ -14,6 +14,6 @@ debug duck, more likely to find errors
 fighting grok
 
 tower defence where you have processes/services that are defending against new code coming in
-you can apply the card to each processadded zig cache to gitignore
+you can apply the card to each process added zig cache to gitignore
 
 add enemies that spawn outside of the screen and move to center
