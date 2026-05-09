@@ -66,4 +66,8 @@ pub const Enemy = struct {
             self.alive = false;
         }
     }
+
+    pub fn get_id(self: Enemy) usize {
+        return self.id;
+    }
 };

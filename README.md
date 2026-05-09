@@ -23,3 +23,5 @@ how to make the card "attack" the enemies??
 
 
 health bar for enemies, enemy take damage
+
+scale spawn timer based on number of cards
