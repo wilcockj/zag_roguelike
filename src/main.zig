@@ -31,6 +31,8 @@ const Game = struct {
         };
 
         try game.card_pool.append(allocator, card.Card.init(allocator, "pull tha plug", .attack, 12, 10));
+        try game.card_pool.append(allocator, card.Card.init(allocator, "ping", .attack, 1, 1));
+        try game.card_pool.append(allocator, card.Card.init(allocator, "ddoss", .attack, 1, 0.1));
 
         return game;
     }
@@ -64,14 +66,14 @@ pub fn main(init: std.process.Init) !void {
     var game = try Game.init(allocator);
     defer game.deinit();
 
-    rl.initWindow(800, 450, "game");
+    try game.cards.append(allocator, game.card_pool.items[0]);
+
     // why can't i do init(100).random() ??
     const timestamp = std.Io.Clock.real.now(init.io);
     var prng = std.Random.Xoroshiro128.init(@intCast(std.Io.Timestamp.toMilliseconds(timestamp)));
     const rand: std.Random = prng.random();
     const en = enemy.Enemy.spawn(0, .red, rand);
     _ = en;
-    try game.cards.append(allocator, game.card_pool.items[0]);
 
     rl.initWindow(window_w, window_h, "game");
     rl.setExitKey(.null);
