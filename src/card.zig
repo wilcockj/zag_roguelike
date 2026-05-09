@@ -2,21 +2,33 @@ const rl = @import("raylib");
 const std = @import("std");
 
 pub const CARD_W = 150;
-pub const CARD_H = 230;
+pub const CARD_H = 100;
 
-pub const CardKind = enum {
+pub const Kind = enum {
     attack,
+
+    pub fn verb(self: Kind) []const u8 {
+        return switch (self) {
+            .attack => "deal",
+        };
+    }
+
+    pub fn action(self: Kind) []const u8 {
+        return switch (self) {
+            .attack => "damage",
+        };
+    }
 };
 
 pub const Card = struct {
     name: [:0]const u8,
-    kind: CardKind,
+    kind: Kind,
     value: u32,
     cooldown: f32,
     cooldown_timer: f32,
     allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator, name: [:0]const u8, kind: CardKind, value: u32, cooldown: f32) Card {
+    pub fn init(allocator: std.mem.Allocator, name: [:0]const u8, kind: Kind, value: u32, cooldown: f32) Card {
         return Card{
             .name = name,
             .kind = kind,
@@ -31,14 +43,20 @@ pub const Card = struct {
         self: Card,
         pos: rl.Vector2,
     ) !void {
-        const font_size: usize = 10;
+        const font_size: usize = 20;
         const card_rect: rl.Rectangle = .init(pos.x, pos.y, CARD_W, CARD_H);
         const pad = 5;
-        rl.drawRectangleRec(card_rect, .ray_white);
+        rl.drawRectangleRec(card_rect, .black);
+        rl.drawRectangleLinesEx(card_rect, 2, .ray_white);
         const title_x: i32 = @as(i32, @intFromFloat(card_rect.x)) + pad;
         const title_y: i32 = @as(i32, @intFromFloat(card_rect.y)) + pad;
-        const text = try std.fmt.allocPrintSentinel(self.allocator, "{s} [{d:.02}]", .{ self.name, self.cooldown_timer }, 0);
-        rl.drawText(text, title_x, title_y, font_size, .black);
+        rl.drawText(self.name, title_x, title_y, font_size, .ray_white);
+
+        const desc = try std.fmt.allocPrintSentinel(self.allocator, "{s} {d} {s} every {d:.01}s", .{ self.kind.verb(), self.value, self.kind.action(), self.cooldown }, 0);
+        // TODO: text wrapping
+        rl.drawText(desc, title_x, title_y + @as(i32, @intCast(font_size)) + pad, font_size / 2, .gray);
+
+        rl.drawLineEx(rl.Vector2.init(card_rect.x, card_rect.y), rl.Vector2.init(card_rect.x + card_rect.width * (self.cooldown_timer / self.cooldown), card_rect.y), 5, .blue);
     }
 
     pub fn update_cooldown(self: *Card, dt: f32) bool {

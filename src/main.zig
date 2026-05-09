@@ -30,8 +30,8 @@ const Game = struct {
             .card_pool = .empty,
         };
 
-        try game.card_pool.append(allocator, card.Card.init(allocator, "pull tha plug", .attack, 12, 10));
-        try game.card_pool.append(allocator, card.Card.init(allocator, "ping", .attack, 1, 1));
+        try game.card_pool.append(allocator, card.Card.init(allocator, "pull tha plug", .attack, 100, 10));
+        try game.card_pool.append(allocator, card.Card.init(allocator, "ping", .attack, 5, 1));
         try game.card_pool.append(allocator, card.Card.init(allocator, "ddoss", .attack, 1, 0.1));
 
         return game;
@@ -51,7 +51,7 @@ const Game = struct {
     pub fn update(self: *Game, dt: f32) void {
         for (self.cards.items) |*c| {
             if (c.update_cooldown(dt)) {
-                // attck or whatever
+                // c.execute(game context)
             }
         }
     }
@@ -63,11 +63,6 @@ pub fn main(init: std.process.Init) !void {
 
     const allocator = arena.allocator();
 
-    var game = try Game.init(allocator);
-    defer game.deinit();
-
-    try game.cards.append(allocator, game.card_pool.items[0]);
-
     // why can't i do init(100).random() ??
     const timestamp = std.Io.Clock.real.now(init.io);
     var prng = std.Random.Xoroshiro128.init(@intCast(std.Io.Timestamp.toMilliseconds(timestamp)));
@@ -75,8 +70,17 @@ pub fn main(init: std.process.Init) !void {
     const en = enemy.Enemy.spawn(0, .red, rand);
     _ = en;
 
+    var game = try Game.init(allocator);
+    defer game.deinit();
+
+    for (0..5) |_| {
+        const idx = rand.uintLessThan(u32, @intCast(game.card_pool.items.len));
+        try game.cards.append(allocator, game.card_pool.items[idx]);
+    }
+
     rl.initWindow(window_w, window_h, "game");
     rl.setExitKey(.null);
+    rl.setTargetFPS(120);
 
     while (!rl.windowShouldClose()) {
         rl.beginDrawing();
@@ -95,10 +99,12 @@ pub fn main(init: std.process.Init) !void {
             .running => {
                 if (rl.isKeyPressed(.escape)) game.state = .paused;
                 try game.draw();
+                rl.drawFPS(0, 0);
             },
             .paused => {
                 if (rg.button(rl.Rectangle.init(10, 10, 150, 50), "resume")) game.state = .running;
                 if (rg.button(rl.Rectangle.init(10, 70, 150, 50), "menu")) game.state = .menu;
+                if (rg.button(rl.Rectangle.init(10, 130, 150, 50), "quit")) break;
             },
         }
     }
