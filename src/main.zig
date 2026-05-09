@@ -1,11 +1,23 @@
 const std = @import("std");
 const Io = std.Io;
 const rl = @import("raylib");
+const card = @import("card.zig");
 
 const zag_roguelike = @import("zag_roguelike");
 
 pub fn main(init: std.process.Init) !void {
     _ = init;
+
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+
+    const allocator = arena.allocator();
+
+    var cards: std.ArrayList(card.Card) = .empty;
+    defer cards.deinit(allocator);
+
+    try cards.append(allocator, card.Card.init("test"));
+
     rl.initWindow(800, 450, "game");
 
     while (!rl.windowShouldClose()) {
@@ -14,5 +26,9 @@ pub fn main(init: std.process.Init) !void {
 
         rl.clearBackground(rl.getColor(0x181818ff));
         rl.drawText("hello zag", 0, 0, 12, .white);
+
+        for (cards.items) |c| {
+            c.draw();
+        }
     }
 }
