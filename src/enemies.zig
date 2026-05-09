@@ -70,4 +70,8 @@ pub const Enemy = struct {
 
         return false;
     }
+
+    pub fn get_id(self: Enemy) usize {
+        return self.id;
+    }
 };
