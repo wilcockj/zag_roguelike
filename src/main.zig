@@ -65,16 +65,18 @@ const Game = struct {
             }
         }
 
-        self.spawn_timer -= dt;
-        if (self.spawn_timer < 0.0) {
-            try self.spawn_enemy();
-            self.spawn_timer = self.spawn_cooldown;
-        }
-        for (self.enemies.items) |*e| {
-            const width: f32 = @as(f32, @floatFromInt(rl.getScreenWidth()));
-            const height: f32 = @as(f32, @floatFromInt(rl.getScreenHeight()));
-            const center = rl.Vector2.init(@divFloor(width, 2), @divFloor(height, 2));
-            e.move_towards(center, dt);
+        if (self.state == .running) {
+            self.spawn_timer -= dt;
+            if (self.spawn_timer < 0.0) {
+                try self.spawn_enemy();
+                self.spawn_timer = self.spawn_cooldown;
+            }
+            for (self.enemies.items) |*e| {
+                const width: f32 = @as(f32, @floatFromInt(rl.getScreenWidth()));
+                const height: f32 = @as(f32, @floatFromInt(rl.getScreenHeight()));
+                const center = rl.Vector2.init(@divFloor(width, 2), @divFloor(height, 2));
+                e.move_towards(center, dt);
+            }
         }
     }
 

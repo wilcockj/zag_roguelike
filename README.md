@@ -17,3 +17,9 @@ tower defence where you have processes/services that are defending against new c
 you can apply the card to each process added zig cache to gitignore
 
 add enemies that spawn outside of the screen and move to center
+
+how to not only spawn at corners???
+how to make the card "attack" the enemies??
+
+
+health bar for enemies, enemy take damage
