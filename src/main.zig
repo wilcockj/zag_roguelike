@@ -76,7 +76,7 @@ const Game = struct {
                     }
 
                     if (idx >= 0) {
-                        self.enemies.items[@as(usize, @intCast(idx))].deal_damage(@floatFromInt(c.value));
+                        self.enemies.items[@as(usize, @intCast(idx))].deal_damage(c.value);
                     }
                 }
             }

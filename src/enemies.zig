@@ -45,7 +45,8 @@ pub const Enemy = struct {
 
         const line_y = rl.Vector2.add(self.pos, rl.Vector2.init(0, -5)).y;
         const health_percent = self.health / self.max_health;
-        rl.drawLineEx(rl.Vector2.init(self.pos.x, line_y), rl.Vector2.init(self.pos.x + 10 * health_percent, line_y), 1.0, .blue);
+        rl.drawLineEx(rl.Vector2.init(self.pos.x, line_y), rl.Vector2.init(self.pos.x + 10, line_y), 2.0, .dark_gray);
+        rl.drawLineEx(rl.Vector2.init(self.pos.x, line_y), rl.Vector2.init(self.pos.x + 10 * health_percent, line_y), 2.0, .red);
 
         rl.drawRectangle(@intFromFloat(self.pos.x), @intFromFloat(self.pos.y), 10, 10, self.color);
     }
