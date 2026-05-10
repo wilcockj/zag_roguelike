@@ -19,7 +19,7 @@ const State = enum {
 
 const Game = struct {
     const starting_cooldown: f32 = 5.0;
-    const upgrade_scale: f32 = 1.2;
+    const upgrade_scale: f32 = 1.8;
     allocator: std.mem.Allocator,
     state: State,
     cards: std.ArrayList(card.Card),
