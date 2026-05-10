@@ -23,12 +23,12 @@ pub const Kind = enum {
 pub const Card = struct {
     name: [:0]const u8,
     kind: Kind,
-    value: u32,
+    value: f32,
     cooldown: f32,
     cooldown_timer: f32,
     allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator, name: [:0]const u8, kind: Kind, value: u32, cooldown: f32) Card {
+    pub fn init(allocator: std.mem.Allocator, name: [:0]const u8, kind: Kind, value: f32, cooldown: f32) Card {
         return Card{
             .name = name,
             .kind = kind,
@@ -56,7 +56,9 @@ pub const Card = struct {
         // TODO: text wrapping
         rl.drawText(desc, title_x, title_y + @as(i32, @intCast(font_size)) + pad, font_size / 2, .gray);
 
-        rl.drawLineEx(rl.Vector2.init(card_rect.x, card_rect.y), rl.Vector2.init(card_rect.x + card_rect.width * (self.cooldown_timer / self.cooldown), card_rect.y), 5, .blue);
+        const pct = self.cooldown_timer / self.cooldown;
+        const color = rl.colorFromHSV(360 * pct, 1.0, 1.0);
+        rl.drawLineEx(rl.Vector2.init(card_rect.x, card_rect.y), rl.Vector2.init(card_rect.x + card_rect.width * (self.cooldown_timer / self.cooldown), card_rect.y), 5, color);
     }
 
     pub fn update_cooldown(self: *Card, dt: f32) bool {

@@ -13,6 +13,7 @@ const window_h = 450;
 const State = enum {
     menu,
     running,
+    choose_card,
     paused,
 };
 
@@ -27,6 +28,7 @@ const Game = struct {
     rand: std.Random,
     spawn_cooldown: f32 = starting_cooldown,
     spawn_timer: f32 = starting_cooldown,
+    kills: usize = 0,
     pub fn init(allocator: std.mem.Allocator, rand: std.Random) !Game {
         var game = Game{
             .allocator = allocator,
@@ -57,6 +59,10 @@ const Game = struct {
             const pad = 5;
             try c.draw(rl.Vector2.init(@floatFromInt(pad + (card.CARD_W + pad) * i), window_h - card.CARD_H - pad));
         }
+
+        const kill_txt = try std.fmt.allocPrintSentinel(self.allocator, "Kills: {d}", .{self.kills}, 0);
+        const font_size = 20;
+        rl.drawText(kill_txt, @divTrunc((window_w - rl.measureText(kill_txt, font_size)), 2), 5, font_size, .red);
     }
 
     pub fn update(self: *Game, dt: f32) !void {
@@ -77,8 +83,7 @@ const Game = struct {
                     }
 
                     if (idx >= 0) {
-                        const enemy_idx = @as(usize, @intCast(idx));
-                        self.enemies.items[enemy_idx].deal_damage(@floatFromInt(c.value));
+                        self.kills += if (self.enemies.items[@as(usize, @intCast(idx))].deal_damage(c.value)) 1 else 0;
                     }
                 }
             }
@@ -145,8 +150,6 @@ pub fn main(init: std.process.Init) !void {
 
         const dt = rl.getFrameTime();
 
-        try game.update(dt);
-
         rl.clearBackground(rl.getColor(0x181818ff));
         switch (game.state) {
             .menu => {
@@ -155,13 +158,19 @@ pub fn main(init: std.process.Init) !void {
             },
             .running => {
                 if (rl.isKeyPressed(.escape)) game.state = .paused;
+                try game.update(dt);
                 try game.draw();
                 rl.drawFPS(0, 0);
             },
+            .choose_card => {},
             .paused => {
+                try game.draw();
+                rl.drawRectangle(0, 0, window_w, window_h, rl.getColor(0x18181899));
                 if (rg.button(rl.Rectangle.init(10, 10, 150, 50), "resume")) game.state = .running;
                 if (rg.button(rl.Rectangle.init(10, 70, 150, 50), "menu")) game.state = .menu;
                 if (rg.button(rl.Rectangle.init(10, 130, 150, 50), "quit")) break;
+
+                if (rl.isKeyPressed(.escape)) game.state = .running;
             },
         }
     }
