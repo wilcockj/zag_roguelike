@@ -42,7 +42,7 @@ pub const Card = struct {
     pub fn draw(
         self: Card,
         pos: rl.Vector2,
-    ) !void {
+    ) !bool {
         const font_size: usize = 20;
         const card_rect: rl.Rectangle = .init(pos.x, pos.y, CARD_W, CARD_H);
         const pad = 5;
@@ -59,6 +59,8 @@ pub const Card = struct {
         const pct = self.cooldown_timer / self.cooldown;
         const color = rl.colorFromHSV(360 * pct, 1.0, 1.0);
         rl.drawLineEx(rl.Vector2.init(card_rect.x, card_rect.y), rl.Vector2.init(card_rect.x + card_rect.width * (self.cooldown_timer / self.cooldown), card_rect.y), 5, color);
+
+        return rl.checkCollisionPointRec(rl.getMousePosition(), card_rect) and rl.isMouseButtonPressed(.left);
     }
 
     pub fn update_cooldown(self: *Card, dt: f32) bool {

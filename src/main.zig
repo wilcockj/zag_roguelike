@@ -26,9 +26,18 @@ const Game = struct {
     enemy_count: usize = 0,
     rand: std.Random,
     kills: usize = 0,
+    card_options: [3]card.Card = .{ undefined, undefined, undefined },
 
     spawn_cooldown: f32 = 1.0,
     spawn_timer: f32 = 1.0,
+
+    pub fn pick3(self: *Game) void {
+        for (0..3) |i| {
+            const idx = self.rand.uintLessThan(u32, @intCast(self.card_pool.items.len));
+            self.card_options[i] = self.card_pool.items[@intCast(idx)];
+        }
+    }
+
     pub fn init(allocator: std.mem.Allocator, rand: std.Random) !Game {
         var game = Game{
             .allocator = allocator,
@@ -57,7 +66,7 @@ const Game = struct {
 
         for (self.cards.items, 0..) |c, i| {
             const pad = 5;
-            try c.draw(rl.Vector2.init(@floatFromInt(pad + (card.CARD_W + pad) * i), window_h - card.CARD_H - pad));
+            _ = try c.draw(rl.Vector2.init(@floatFromInt(pad + (card.CARD_W + pad) * i), window_h - card.CARD_H - pad));
         }
 
         const kill_txt = try std.fmt.allocPrintSentinel(self.allocator, "Kills: {d}", .{self.kills}, 0);
@@ -135,10 +144,10 @@ pub fn main(init: std.process.Init) !void {
     var game = try Game.init(allocator, rand);
     defer game.deinit();
 
-    for (0..5) |_| {
-        const idx = rand.uintLessThan(u32, @intCast(game.card_pool.items.len));
-        try game.cards.append(allocator, game.card_pool.items[idx]);
-    }
+    // for (0..5) |_| {
+    //     const idx = rand.uintLessThan(u32, @intCast(game.card_pool.items.len));
+    //     try game.cards.append(allocator, game.card_pool.items[idx]);
+    // }
 
     rl.initWindow(window_w, window_h, "game");
     rl.setExitKey(.null);
@@ -153,8 +162,23 @@ pub fn main(init: std.process.Init) !void {
         rl.clearBackground(rl.getColor(0x181818ff));
         switch (game.state) {
             .menu => {
-                if (rg.button(rl.Rectangle.init(10, 10, 150, 50), "start")) game.state = .running;
+                if (rg.button(rl.Rectangle.init(10, 10, 150, 50), "start")) {
+                    game.pick3();
+                    game.state = .choose_card;
+                }
                 if (rg.button(rl.Rectangle.init(10, 70, 150, 50), "quit")) break;
+            },
+            .choose_card => {
+                rl.drawText("pick a card!", 20, 20, 40, .blue);
+                for (game.card_options, 0..) |c, i| {
+                    const pad = 5;
+                    const clicked = try c.draw(rl.Vector2.init(@floatFromInt(pad + (card.CARD_W + pad) * i), window_h - card.CARD_H - pad));
+                    if (clicked) {
+                        try game.cards.append(game.allocator, game.card_options[i]);
+                        game.state = .running;
+                        break;
+                    }
+                }
             },
             .running => {
                 if (rl.isKeyPressed(.escape)) game.state = .paused;
@@ -162,7 +186,6 @@ pub fn main(init: std.process.Init) !void {
                 try game.draw();
                 rl.drawFPS(0, 0);
             },
-            .choose_card => {},
             .paused => {
                 try game.draw();
                 rl.drawRectangle(0, 0, window_w, window_h, rl.getColor(0x18181899));
