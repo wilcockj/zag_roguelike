@@ -18,6 +18,7 @@ const State = enum {
 };
 
 const Game = struct {
+    const starting_cooldown: f32 = 5.0;
     allocator: std.mem.Allocator,
     state: State,
     cards: std.ArrayList(card.Card),
@@ -25,11 +26,10 @@ const Game = struct {
     enemies: std.ArrayList(enemy.Enemy),
     enemy_count: usize = 0,
     rand: std.Random,
+    spawn_cooldown: f32 = starting_cooldown,
+    spawn_timer: f32 = starting_cooldown,
     kills: usize = 0,
     card_options: [3]card.Card = .{ undefined, undefined, undefined },
-
-    spawn_cooldown: f32 = 1.0,
-    spawn_timer: f32 = 1.0,
 
     pub fn pick3(self: *Game) void {
         for (0..3) |i| {
@@ -52,6 +52,10 @@ const Game = struct {
         try game.card_pool.append(allocator, card.Card.init(allocator, "ping", .attack, 5, 1));
         try game.card_pool.append(allocator, card.Card.init(allocator, "ddoss", .attack, 1, 0.1));
 
+        // scale the spawn cooldown
+        if (game.cards.items.len > 0) {
+            game.spawn_cooldown = starting_cooldown / @as(f32, @floatFromInt(game.cards.items.len));
+        }
         return game;
     }
 
@@ -109,18 +113,21 @@ const Game = struct {
             }
         }
 
-        if (self.state == .running) {
-            self.spawn_timer -= dt;
-            if (self.spawn_timer < 0.0) {
-                try self.spawn_enemy();
-                self.spawn_timer = self.spawn_cooldown;
-            }
-            for (self.enemies.items) |*e| {
-                const width: f32 = @as(f32, @floatFromInt(rl.getScreenWidth()));
-                const height: f32 = @as(f32, @floatFromInt(rl.getScreenHeight()));
-                const center = rl.Vector2.init(@divFloor(width, 2), @divFloor(height, 2));
-                e.move_towards(center, dt);
-            }
+        if (self.cards.items.len > 0) {
+            // scale cooldown based on cards num
+            self.spawn_cooldown = starting_cooldown / @as(f32, @floatFromInt(self.cards.items.len));
+        }
+
+        self.spawn_timer -= dt;
+        if (self.spawn_timer < 0.0) {
+            try self.spawn_enemy();
+            self.spawn_timer = self.spawn_cooldown;
+        }
+        for (self.enemies.items) |*e| {
+            const width: f32 = @as(f32, @floatFromInt(rl.getScreenWidth()));
+            const height: f32 = @as(f32, @floatFromInt(rl.getScreenHeight()));
+            const center = rl.Vector2.init(@divFloor(width, 2), @divFloor(height, 2));
+            e.move_towards(center, dt);
         }
     }
 
