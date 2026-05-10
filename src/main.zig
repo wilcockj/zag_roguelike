@@ -19,6 +19,7 @@ const State = enum {
 
 const Game = struct {
     const starting_cooldown: f32 = 5.0;
+    const upgrade_scale: f32 = 1.2;
     allocator: std.mem.Allocator,
     state: State,
     cards: std.ArrayList(card.Card),
@@ -29,6 +30,7 @@ const Game = struct {
     spawn_cooldown: f32 = starting_cooldown,
     spawn_timer: f32 = starting_cooldown,
     kills: usize = 0,
+    kills_upgrade_thresh: f32 = 5.0,
     card_options: [3]card.Card = .{ undefined, undefined, undefined },
 
     pub fn pick3(self: *Game) void {
@@ -79,6 +81,11 @@ const Game = struct {
     }
 
     pub fn update(self: *Game, dt: f32) !void {
+        if (@as(f32, @floatFromInt(self.kills)) > self.kills_upgrade_thresh) {
+            self.state = .choose_card;
+            self.kills_upgrade_thresh *= upgrade_scale;
+            return;
+        }
         for (self.cards.items) |*c| {
             if (c.update_cooldown(dt)) {
                 if (c.kind == .attack) {
