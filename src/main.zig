@@ -176,6 +176,8 @@ pub fn main(init: std.process.Init) !void {
                 if (rg.button(rl.Rectangle.init(10, 70, 150, 50), "quit")) break;
             },
             .choose_card => {
+                try game.draw();
+                rl.drawRectangle(0, 0, window_w, window_h, rl.getColor(0x18181899));
                 rl.drawText("pick a card!", 20, 20, 40, .blue);
                 for (game.card_options, 0..) |c, i| {
                     const pad = 5;
