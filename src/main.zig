@@ -18,7 +18,7 @@ const State = enum {
 };
 
 const Game = struct {
-    const starting_cooldown: f32 = 10.0;
+    const starting_cooldown: f32 = 5.0;
     allocator: std.mem.Allocator,
     state: State,
     cards: std.ArrayList(card.Card),
@@ -43,6 +43,10 @@ const Game = struct {
         try game.card_pool.append(allocator, card.Card.init(allocator, "ping", .attack, 5, 1));
         try game.card_pool.append(allocator, card.Card.init(allocator, "ddoss", .attack, 1, 0.1));
 
+        // scale the spawn cooldown
+        if (game.cards.items.len > 0) {
+            game.spawn_cooldown = starting_cooldown / @as(f32, @floatFromInt(game.cards.items.len));
+        }
         return game;
     }
 
@@ -100,7 +104,10 @@ const Game = struct {
             }
         }
 
-        self.spawn_cooldown = starting_cooldown / @as(f32, @floatFromInt(self.cards.items.len));
+        if (self.cards.items.len > 0) {
+            // scale cooldown based on cards num
+            self.spawn_cooldown = starting_cooldown / @as(f32, @floatFromInt(self.cards.items.len));
+        }
 
         self.spawn_timer -= dt;
         if (self.spawn_timer < 0.0) {
