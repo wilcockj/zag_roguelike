@@ -17,6 +17,7 @@ const State = enum {
 };
 
 const Game = struct {
+    const starting_cooldown: f32 = 10.0;
     allocator: std.mem.Allocator,
     state: State,
     cards: std.ArrayList(card.Card),
@@ -24,9 +25,8 @@ const Game = struct {
     enemies: std.ArrayList(enemy.Enemy),
     enemy_count: usize = 0,
     rand: std.Random,
-
-    spawn_cooldown: f32 = 2.0,
-    spawn_timer: f32 = 2.0,
+    spawn_cooldown: f32 = starting_cooldown,
+    spawn_timer: f32 = starting_cooldown,
     pub fn init(allocator: std.mem.Allocator, rand: std.Random) !Game {
         var game = Game{
             .allocator = allocator,
@@ -95,18 +95,18 @@ const Game = struct {
             }
         }
 
-        if (self.state == .running) {
-            self.spawn_timer -= dt;
-            if (self.spawn_timer < 0.0) {
-                try self.spawn_enemy();
-                self.spawn_timer = self.spawn_cooldown;
-            }
-            for (self.enemies.items) |*e| {
-                const width: f32 = @as(f32, @floatFromInt(rl.getScreenWidth()));
-                const height: f32 = @as(f32, @floatFromInt(rl.getScreenHeight()));
-                const center = rl.Vector2.init(@divFloor(width, 2), @divFloor(height, 2));
-                e.move_towards(center, dt);
-            }
+        self.spawn_cooldown = starting_cooldown / @as(f32, @floatFromInt(self.cards.items.len));
+
+        self.spawn_timer -= dt;
+        if (self.spawn_timer < 0.0) {
+            try self.spawn_enemy();
+            self.spawn_timer = self.spawn_cooldown;
+        }
+        for (self.enemies.items) |*e| {
+            const width: f32 = @as(f32, @floatFromInt(rl.getScreenWidth()));
+            const height: f32 = @as(f32, @floatFromInt(rl.getScreenHeight()));
+            const center = rl.Vector2.init(@divFloor(width, 2), @divFloor(height, 2));
+            e.move_towards(center, dt);
         }
     }
 
