@@ -4,6 +4,7 @@ const rl = @import("raylib");
 const rg = @import("raygui");
 const card = @import("card.zig");
 const enemy = @import("enemies.zig");
+const particle = @import("particle.zig");
 
 const zag_roguelike = @import("zag_roguelike");
 
@@ -32,6 +33,8 @@ const Game = struct {
     kills: usize = 0,
     kills_upgrade_thresh: f32 = 5.0,
     card_options: [3]card.Card = .{ undefined, undefined, undefined },
+    particles: std.ArrayList(particle.Particle),
+    io: Io,
 
     pub fn pick3(self: *Game) void {
         for (0..3) |i| {
@@ -40,14 +43,16 @@ const Game = struct {
         }
     }
 
-    pub fn init(allocator: std.mem.Allocator, rand: std.Random) !Game {
+    pub fn init(allocator: std.mem.Allocator, rand: std.Random, io: Io) !Game {
         var game = Game{
             .allocator = allocator,
             .state = .menu,
             .cards = .empty,
             .card_pool = .empty,
             .enemies = .empty,
+            .particles = .empty,
             .rand = rand,
+            .io = io,
         };
 
         try game.card_pool.append(allocator, card.Card.init(allocator, "pull tha plug", .attack, 100, 10));
@@ -68,6 +73,11 @@ const Game = struct {
     pub fn draw(self: *Game) !void {
         for (self.enemies.items) |e| {
             e.draw();
+        }
+
+        for (self.particles.items) |p| {
+            const time = std.Io.Timestamp.toMilliseconds(std.Io.Clock.real.now(self.io));
+            p.draw(time);
         }
 
         for (self.cards.items, 0..) |c, i| {
@@ -103,7 +113,14 @@ const Game = struct {
                     }
 
                     if (idx >= 0) {
+                        const cur_enemy = self.enemies.items[@as(usize, @intCast(idx))];
+                        // we are hurting the enemy
                         self.kills += if (self.enemies.items[@as(usize, @intCast(idx))].deal_damage(c.value)) 1 else 0;
+                        // generate a particle
+                        const time = std.Io.Timestamp.toMilliseconds(std.Io.Clock.real.now(self.io));
+                        const zero_vec = rl.Vector2.init(0, 0);
+                        const new_particle = particle.Particle.init_line(center, cur_enemy.pos, time, 200, zero_vec, .maroon);
+                        try self.particles.append(self.allocator, new_particle);
                     }
                 }
             }
@@ -136,6 +153,19 @@ const Game = struct {
             const center = rl.Vector2.init(@divFloor(width, 2), @divFloor(height, 2));
             e.move_towards(center, dt);
         }
+
+        // check for if particle is dead and remove
+        const time = std.Io.Timestamp.toMilliseconds(std.Io.Clock.real.now(self.io));
+        for (0..self.particles.items.len) |_| {
+            for (0..self.particles.items.len) |idx| {
+                const p = self.particles.items[idx];
+                if (time - p.start_time > p.lifetime) {
+                    // then remove particle
+                    _ = self.particles.swapRemove(idx);
+                    break;
+                }
+            }
+        }
     }
 
     pub fn spawn_enemy(self: *Game) !void {
@@ -155,7 +185,7 @@ pub fn main(init: std.process.Init) !void {
     var prng = std.Random.Xoroshiro128.init(@intCast(std.Io.Timestamp.toMilliseconds(timestamp)));
     const rand: std.Random = prng.random();
 
-    var game = try Game.init(allocator, rand);
+    var game = try Game.init(allocator, rand, init.io);
     defer game.deinit();
 
     // for (0..5) |_| {
