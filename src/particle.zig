@@ -1,5 +1,8 @@
 const rl = @import("raylib");
 const std = @import("std");
+const tween = @import("mr_tween");
+const lerp = tween.interp.lerp;
+const ease = tween.ease;
 
 const line_info = struct { start: rl.Vector2, end: rl.Vector2, thickness: f32 };
 
@@ -46,9 +49,14 @@ pub const Particle = struct {
                 var color = self.color;
                 const elapsed = @as(f32, @floatFromInt(current_time - self.start_time));
                 const lifetime = @as(f32, @floatFromInt(self.lifetime));
-                const alpha = (1.0 - elapsed / lifetime) * 255.0;
-                if (alpha < 0.0) {
+                const t = (1.0 - elapsed / lifetime);
+                const alpha = lerp(0.0, 255.0, ease.bounceOut(t));
+                if (t < 0.0) {
                     color.a = 0;
+                } else if (alpha < 0.0) {
+                    color.a = 0;
+                } else if (alpha > 255.0) {
+                    color.a = 255;
                 } else {
                     color.a = @as(u8, @intFromFloat(alpha));
                 }

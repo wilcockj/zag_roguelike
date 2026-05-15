@@ -36,6 +36,10 @@
             .url = "git+https://github.com/raylib-zig/raylib-zig?ref=devel#58f3c0fa328fc9ff48d17c2c3771ab9c5114aaa6",
             .hash = "raylib_zig-6.0.0-KE8REMNkBQCpxwqT9ubVNf5aEOcWRUVIaH2sgt_sDDoZ",
         },
+        .mr_tween = .{
+            .url = "git+https://codeberg.org/Games-by-Mason/mr_tween.git#fdd9e613291334439a6d027d6c371db29383625e",
+            .hash = "mr_tween-0.2.0-WbH78eDlAQDgGGoDlMIsbdi0TEl96va8h2N7TTYru3S4",
+        },
     },
     .paths = .{
         "build.zig",

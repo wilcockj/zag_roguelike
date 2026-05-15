@@ -35,6 +35,7 @@ const Game = struct {
     card_options: [3]card.Card = .{ undefined, undefined, undefined },
     particles: std.ArrayList(particle.Particle),
     io: Io,
+    pause_timestamp: i64,
 
     pub fn pick3(self: *Game) void {
         for (0..3) |i| {
@@ -53,6 +54,7 @@ const Game = struct {
             .particles = .empty,
             .rand = rand,
             .io = io,
+            .pause_timestamp = 0,
         };
 
         try game.card_pool.append(allocator, card.Card.init(allocator, "pull tha plug", .attack, 100, 10));
@@ -77,7 +79,11 @@ const Game = struct {
 
         for (self.particles.items) |p| {
             const time = std.Io.Timestamp.toMilliseconds(std.Io.Clock.real.now(self.io));
-            p.draw(time);
+            if (self.state == .paused) {
+                p.draw(self.pause_timestamp);
+            } else {
+                p.draw(time);
+            }
         }
 
         for (self.cards.items, 0..) |c, i| {
@@ -227,7 +233,11 @@ pub fn main(init: std.process.Init) !void {
                 }
             },
             .running => {
-                if (rl.isKeyPressed(.escape)) game.state = .paused;
+                if (rl.isKeyPressed(.escape)) {
+                    game.state = .paused;
+                    const time = std.Io.Clock.real.now(init.io);
+                    game.pause_timestamp = std.Io.Timestamp.toMilliseconds(time);
+                }
                 try game.update(dt);
                 try game.draw();
                 rl.drawFPS(0, 0);
