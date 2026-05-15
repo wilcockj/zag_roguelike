@@ -208,7 +208,7 @@ pub fn main(init: std.process.Init) !void {
     // }
 
     const wsl = isWsl();
-    rl.setConfigFlags(.{ .window_hidden = wsl, .window_resizable = true });
+    rl.setConfigFlags(.{ .window_hidden = wsl, .window_resizable = true, .msaa_4x_hint = true });
     rl.initWindow(window_w, window_h, "game");
     if (wsl) {
         rl.setWindowPosition(100, 100);

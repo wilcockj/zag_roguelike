@@ -53,7 +53,9 @@ pub const Enemy = struct {
         rl.drawLineEx(rl.Vector2.init(self.pos.x - half, line_y), rl.Vector2.init(self.pos.x + half, line_y), 2.0, .dark_gray);
         rl.drawLineEx(rl.Vector2.init(self.pos.x - half, line_y), rl.Vector2.init(self.pos.x - half + sz * health_percent, line_y), 2.0, .red);
 
-        rl.drawRectangle(@intFromFloat(self.pos.x - half), @intFromFloat(self.pos.y - half), @intFromFloat(sz), @intFromFloat(sz), self.color);
+        const top_left = rl.Vector2.init(self.pos.x - half, self.pos.y - half);
+        const rect_size = rl.Vector2.init(sz, sz);
+        rl.drawRectangleV(top_left, rect_size, self.color);
     }
 
     pub fn move_towards(self: *Enemy, target: rl.Vector2, deltatime: f32) void {
