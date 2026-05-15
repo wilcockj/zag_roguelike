@@ -211,9 +211,6 @@ pub fn main(init: std.process.Init) !void {
     rl.setExitKey(.null);
     rl.setTargetFPS(120);
 
-    const target = try rl.loadRenderTexture(window_w, window_h);
-    defer target.unload();
-
     while (!rl.windowShouldClose()) {
         const win_w_f: f32 = @floatFromInt(rl.getScreenWidth());
         const win_h_f: f32 = @floatFromInt(rl.getScreenHeight());
@@ -223,7 +220,7 @@ pub fn main(init: std.process.Init) !void {
         const dest_x = (win_w_f - dest_w) / 2;
         const dest_y = (win_h_f - dest_h) / 2;
 
-        // remap mouse into internal coords so raygui hit-tests against the scaled texture
+        // remap mouse into internal coords so raygui hit-tests against the camera-scaled scene
         rl.setMouseOffset(@intFromFloat(-dest_x), @intFromFloat(-dest_y));
         rl.setMouseScale(1.0 / scale, 1.0 / scale);
 
@@ -232,7 +229,19 @@ pub fn main(init: std.process.Init) !void {
 
         const dt = rl.getFrameTime();
 
-        rl.beginTextureMode(target);
+        rl.clearBackground(.black);
+        rl.beginScissorMode(@intFromFloat(dest_x), @intFromFloat(dest_y), @intFromFloat(dest_w), @intFromFloat(dest_h));
+        defer rl.endScissorMode();
+
+        const camera = rl.Camera2D{
+            .offset = rl.Vector2.init(dest_x, dest_y),
+            .target = rl.Vector2.init(0, 0),
+            .rotation = 0,
+            .zoom = scale,
+        };
+        rl.beginMode2D(camera);
+        defer rl.endMode2D();
+
         rl.clearBackground(rl.getColor(0x181818ff));
         switch (game.state) {
             .menu => {
@@ -285,16 +294,5 @@ pub fn main(init: std.process.Init) !void {
                 if (rl.isKeyPressed(.escape)) game.state = .running;
             },
         }
-        rl.endTextureMode();
-
-        rl.clearBackground(.black);
-        rl.drawTexturePro(
-            target.texture,
-            rl.Rectangle.init(0, 0, @floatFromInt(target.texture.width), -@as(f32, @floatFromInt(target.texture.height))),
-            rl.Rectangle.init(dest_x, dest_y, dest_w, dest_h),
-            rl.Vector2.init(0, 0),
-            0,
-            .white,
-        );
     }
 }
