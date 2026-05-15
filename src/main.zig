@@ -15,6 +15,7 @@ const State = enum {
     running,
     choose_card,
     paused,
+    settings,
 };
 
 const Game = struct {
@@ -32,6 +33,7 @@ const Game = struct {
     kills: usize = 0,
     kills_upgrade_thresh: f32 = 5.0,
     card_options: [3]card.Card = .{ undefined, undefined, undefined },
+    return_state: State = .menu,
 
     pub fn pick3(self: *Game) void {
         for (0..3) |i| {
@@ -144,6 +146,14 @@ const Game = struct {
     }
 };
 
+fn isWsl() bool {
+    if (@import("builtin").os.tag != .linux) return false;
+    const uname = std.posix.uname();
+    const release = std.mem.sliceTo(&uname.release, 0);
+    return std.mem.indexOf(u8, release, "microsoft") != null or
+        std.mem.indexOf(u8, release, "WSL") != null;
+}
+
 pub fn main(init: std.process.Init) !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
@@ -163,16 +173,38 @@ pub fn main(init: std.process.Init) !void {
     //     try game.cards.append(allocator, game.card_pool.items[idx]);
     // }
 
+    const wsl = isWsl();
+    rl.setConfigFlags(.{ .window_hidden = wsl, .window_resizable = true });
     rl.initWindow(window_w, window_h, "game");
+    if (wsl) {
+        rl.setWindowPosition(100, 100);
+        rl.clearWindowState(.{ .window_hidden = true });
+    }
     rl.setExitKey(.null);
     rl.setTargetFPS(120);
 
+    const target = try rl.loadRenderTexture(window_w, window_h);
+    defer target.unload();
+
     while (!rl.windowShouldClose()) {
+        const win_w_f: f32 = @floatFromInt(rl.getScreenWidth());
+        const win_h_f: f32 = @floatFromInt(rl.getScreenHeight());
+        const scale = @min(win_w_f / @as(f32, @floatFromInt(window_w)), win_h_f / @as(f32, @floatFromInt(window_h)));
+        const dest_w = @as(f32, @floatFromInt(window_w)) * scale;
+        const dest_h = @as(f32, @floatFromInt(window_h)) * scale;
+        const dest_x = (win_w_f - dest_w) / 2;
+        const dest_y = (win_h_f - dest_h) / 2;
+
+        // remap mouse into internal coords so raygui hit-tests against the scaled texture
+        rl.setMouseOffset(@intFromFloat(-dest_x), @intFromFloat(-dest_y));
+        rl.setMouseScale(1.0 / scale, 1.0 / scale);
+
         rl.beginDrawing();
         defer rl.endDrawing();
 
         const dt = rl.getFrameTime();
 
+        rl.beginTextureMode(target);
         rl.clearBackground(rl.getColor(0x181818ff));
         switch (game.state) {
             .menu => {
@@ -180,7 +212,16 @@ pub fn main(init: std.process.Init) !void {
                     game.pick3();
                     game.state = .choose_card;
                 }
-                if (rg.button(rl.Rectangle.init(10, 70, 150, 50), "quit")) break;
+                if (rg.button(rl.Rectangle.init(10, 70, 150, 50), "settings")) {
+                    game.return_state = game.state;
+                    game.state = .settings;
+                }
+                if (rg.button(rl.Rectangle.init(10, 130, 150, 50), "quit")) break;
+            },
+            .settings => {
+                const fs_label = if (rl.isWindowFullscreen()) "fullscreen: on" else "fullscreen: off";
+                if (rg.button(rl.Rectangle.init(10, 10, 150, 50), fs_label)) rl.toggleFullscreen();
+                if (rg.button(rl.Rectangle.init(10, 70, 150, 50), "back")) game.state = game.return_state;
             },
             .choose_card => {
                 try game.draw();
@@ -206,11 +247,26 @@ pub fn main(init: std.process.Init) !void {
                 try game.draw();
                 rl.drawRectangle(0, 0, window_w, window_h, rl.getColor(0x18181899));
                 if (rg.button(rl.Rectangle.init(10, 10, 150, 50), "resume")) game.state = .running;
-                if (rg.button(rl.Rectangle.init(10, 70, 150, 50), "menu")) game.state = .menu;
-                if (rg.button(rl.Rectangle.init(10, 130, 150, 50), "quit")) break;
+                if (rg.button(rl.Rectangle.init(10, 70, 150, 50), "settings")) {
+                    game.return_state = game.state;
+                    game.state = .settings;
+                }
+                if (rg.button(rl.Rectangle.init(10, 130, 150, 50), "menu")) game.state = .menu;
+                if (rg.button(rl.Rectangle.init(10, 190, 150, 50), "quit")) break;
 
                 if (rl.isKeyPressed(.escape)) game.state = .running;
             },
         }
+        rl.endTextureMode();
+
+        rl.clearBackground(.black);
+        rl.drawTexturePro(
+            target.texture,
+            rl.Rectangle.init(0, 0, @floatFromInt(target.texture.width), -@as(f32, @floatFromInt(target.texture.height))),
+            rl.Rectangle.init(dest_x, dest_y, dest_w, dest_h),
+            rl.Vector2.init(0, 0),
+            0,
+            .white,
+        );
     }
 }
