@@ -13,8 +13,8 @@ pub const Enemy = struct {
     pub fn spawn(id: usize, color: rl.Color, rand: std.Random) Enemy {
         // spawn the enemy outside of the screen
         const rand_scale = 100;
-        const width: f32 = @floatFromInt(rl.getScreenWidth());
-        const height: f32 = @floatFromInt(rl.getScreenHeight());
+        const width: f32 = 800;
+        const height: f32 = 450;
         const spawn_x_rand = (rand.float(f32) - 0.5);
         var spawn_x = spawn_x_rand * rand_scale;
         if (spawn_x_rand > 0.0) {
@@ -40,15 +40,20 @@ pub const Enemy = struct {
         };
     }
 
+    pub fn size(self: Enemy) f32 {
+        return 8.0 + self.max_health / 10.0;
+    }
+
     pub fn draw(self: Enemy) void {
-        // draw healthbar
+        const sz = self.size();
+        const half = sz / 2.0;
 
-        const line_y = rl.Vector2.add(self.pos, rl.Vector2.init(0, -5)).y;
+        const line_y = self.pos.y - half - 5;
         const health_percent = self.health / self.max_health;
-        rl.drawLineEx(rl.Vector2.init(self.pos.x, line_y), rl.Vector2.init(self.pos.x + 10, line_y), 2.0, .dark_gray);
-        rl.drawLineEx(rl.Vector2.init(self.pos.x, line_y), rl.Vector2.init(self.pos.x + 10 * health_percent, line_y), 2.0, .red);
+        rl.drawLineEx(rl.Vector2.init(self.pos.x - half, line_y), rl.Vector2.init(self.pos.x + half, line_y), 2.0, .dark_gray);
+        rl.drawLineEx(rl.Vector2.init(self.pos.x - half, line_y), rl.Vector2.init(self.pos.x - half + sz * health_percent, line_y), 2.0, .red);
 
-        rl.drawRectangle(@intFromFloat(self.pos.x), @intFromFloat(self.pos.y), 10, 10, self.color);
+        rl.drawRectangle(@intFromFloat(self.pos.x - half), @intFromFloat(self.pos.y - half), @intFromFloat(sz), @intFromFloat(sz), self.color);
     }
 
     pub fn move_towards(self: *Enemy, target: rl.Vector2, deltatime: f32) void {
