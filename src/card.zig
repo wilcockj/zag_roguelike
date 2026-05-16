@@ -4,31 +4,39 @@ const std = @import("std");
 pub const CARD_W = 150;
 pub const CARD_H = 100;
 
-pub const Kind = enum {
-    attack,
+pub const KindData = union(enum) {
+    attack: void,
+    circle_weapon: struct {
+        aoe_radius: f32,
+        orbit_radius: f32,
+        current_degree: f32 = 0.0,
+        rotation_speed: f32 = 2.0,
+    },
 
-    pub fn verb(self: Kind) []const u8 {
+    pub fn verb(self: KindData) []const u8 {
         return switch (self) {
             .attack => "deal",
+            .circle_weapon => "circle impacted",
         };
     }
 
-    pub fn action(self: Kind) []const u8 {
+    pub fn action(self: KindData) []const u8 {
         return switch (self) {
             .attack => "damage",
+            .circle_weapon => "circle damage",
         };
     }
 };
 
 pub const Card = struct {
     name: [:0]const u8,
-    kind: Kind,
+    kind: KindData,
     value: f32,
     cooldown: f32,
     cooldown_timer: f32,
     allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator, name: [:0]const u8, kind: Kind, value: f32, cooldown: f32) Card {
+    pub fn init(allocator: std.mem.Allocator, name: [:0]const u8, kind: KindData, value: f32, cooldown: f32) Card {
         return Card{
             .name = name,
             .kind = kind,

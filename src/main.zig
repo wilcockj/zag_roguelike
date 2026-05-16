@@ -38,6 +38,7 @@ const Game = struct {
     particles: std.ArrayList(particle.Particle),
     io: Io,
     pause_timestamp: i64,
+    const center: rl.Vector2 = rl.Vector2.init(window_w / 2, window_h / 2);
 
     pub fn pick3(self: *Game) void {
         for (0..3) |i| {
@@ -63,6 +64,9 @@ const Game = struct {
         try game.card_pool.append(allocator, card.Card.init(allocator, "ping", .attack, 5, 1));
         try game.card_pool.append(allocator, card.Card.init(allocator, "ddoss", .attack, 1, 0.1));
 
+        const circular_investment_weapon = card.KindData{ .circle_weapon = .{ .aoe_radius = 50.0, .orbit_radius = 150.0, .rotation_speed = 10.0 } };
+        try game.card_pool.append(allocator, card.Card.init(allocator, "circular investment", circular_investment_weapon, 30, 0.05));
+
         // scale the spawn cooldown
         if (game.cards.items.len > 0) {
             game.spawn_cooldown = starting_cooldown / @as(f32, @floatFromInt(game.cards.items.len));
@@ -72,6 +76,19 @@ const Game = struct {
 
     pub fn deinit(self: *Game) void {
         self.cards.deinit(self.allocator);
+    }
+
+    pub fn get_attack_loc(c: card.Card) rl.Vector2 {
+        switch (c.kind) {
+            .circle_weapon => {
+                const orbit_radius = c.kind.circle_weapon.orbit_radius;
+                const circle_loc = rl.Vector2.add(center, rl.Vector2.init(orbit_radius * std.math.cos(c.kind.circle_weapon.current_degree), orbit_radius * std.math.sin(c.kind.circle_weapon.current_degree)));
+                return circle_loc;
+            },
+            .attack => {
+                return center;
+            },
+        }
     }
 
     pub fn draw(self: *Game) !void {
@@ -91,6 +108,16 @@ const Game = struct {
         for (self.cards.items, 0..) |c, i| {
             const pad = 5;
             _ = try c.draw(rl.Vector2.init(@floatFromInt(pad + (card.CARD_W + pad) * i), window_h - card.CARD_H - pad));
+            if (c.kind == .circle_weapon) {
+                // we need to render the actual attack
+                var color = rl.Color.blue;
+                color.a = 255 / 2;
+
+                const circle_radius = c.kind.circle_weapon.aoe_radius;
+
+                const circle_loc = get_attack_loc(c);
+                rl.drawCircleV(circle_loc, circle_radius, color);
+            }
         }
 
         const kill_txt = try std.fmt.allocPrintSentinel(self.allocator, "Kills: {d}", .{self.kills}, 0);
@@ -105,32 +132,47 @@ const Game = struct {
             return;
         }
         for (self.cards.items) |*c| {
-            if (c.update_cooldown(dt)) {
-                if (c.kind == .attack) {
-                    const center: rl.Vector2 = .init(window_w / 2, window_h / 2);
+            switch (c.kind) {
+                .attack => {
+                    if (c.update_cooldown(dt)) {
+                        var idx: i32 = -1;
+                        var distance: f32 = std.math.floatMax(f32);
+                        for (self.enemies.items, 0..) |e, i| {
+                            const d = center.distance(e.pos);
+                            const on_screen = rl.checkCollisionPointRec(e.pos, rl.Rectangle.init(0, 0, window_w, window_h));
+                            if (d < distance and e.alive and on_screen) {
+                                distance = d;
+                                idx = @intCast(i);
+                            }
+                        }
 
-                    var idx: i32 = -1;
-                    var distance: f32 = std.math.floatMax(f32);
-                    for (self.enemies.items, 0..) |e, i| {
-                        const d = center.distance(e.pos);
-                        const on_screen = rl.checkCollisionPointRec(e.pos, rl.Rectangle.init(0, 0, window_w, window_h));
-                        if (d < distance and e.alive and on_screen) {
-                            distance = d;
-                            idx = @intCast(i);
+                        if (idx >= 0) {
+                            const cur_enemy = self.enemies.items[@as(usize, @intCast(idx))];
+                            // we are hurting the enemy
+                            self.kills += if (self.enemies.items[@as(usize, @intCast(idx))].deal_damage(c.value)) 1 else 0;
+                            // generate a particle
+                            const time = std.Io.Timestamp.toMilliseconds(std.Io.Clock.real.now(self.io));
+                            const zero_vec = rl.Vector2.init(0, 0);
+                            const new_particle = particle.Particle.init_line(center, cur_enemy.pos, time, 200, zero_vec, .maroon);
+                            try self.particles.append(self.allocator, new_particle);
                         }
                     }
-
-                    if (idx >= 0) {
-                        const cur_enemy = self.enemies.items[@as(usize, @intCast(idx))];
-                        // we are hurting the enemy
-                        self.kills += if (self.enemies.items[@as(usize, @intCast(idx))].deal_damage(c.value)) 1 else 0;
-                        // generate a particle
-                        const time = std.Io.Timestamp.toMilliseconds(std.Io.Clock.real.now(self.io));
-                        const zero_vec = rl.Vector2.init(0, 0);
-                        const new_particle = particle.Particle.init_line(center, cur_enemy.pos, time, 200, zero_vec, .maroon);
-                        try self.particles.append(self.allocator, new_particle);
+                },
+                .circle_weapon => {
+                    if (c.update_cooldown(dt)) {
+                        // damage if necessary
+                        // check all enemies and if they are within the radius need to damage them
+                        for (self.enemies.items) |*e| {
+                            // check if the enemey is within the circle
+                            if (rl.checkCollisionPointCircle(e.pos, get_attack_loc(c.*), c.kind.circle_weapon.aoe_radius)) {
+                                // do damage to enemy
+                                self.kills += if (e.deal_damage(c.value)) 1 else 0;
+                            }
+                        }
                     }
-                }
+                    // need to advance the position
+                    c.kind.circle_weapon.current_degree += c.kind.circle_weapon.rotation_speed * dt;
+                },
             }
         }
 
@@ -156,7 +198,6 @@ const Game = struct {
             self.spawn_timer = self.spawn_cooldown;
         }
         for (self.enemies.items) |*e| {
-            const center = rl.Vector2.init(window_w / 2, window_h / 2);
             e.move_towards(center, dt);
         }
 
